@@ -26,10 +26,25 @@ html, body {
   padding: 5px 10px;
   cursor: pointer;
 }
+#start-button {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  background-color: rgba(0, 255, 0, 0.8);
+  border: none;
+  border-radius: 5px;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-size: 16px;
+  display: block; /* Initially visible */
+}
 </style>
 </head>
 <body>
 <button id="back-button" onclick="window.location.href='index.html';">Назад</button>
+<button id="start-button" onclick="startGame()">Старт</button>
 <canvas id="canvas"></canvas>
 <script>
 "use strict";
@@ -39,19 +54,19 @@ cvs.width = window.innerWidth;
 cvs.height = window.innerHeight;
 const ctx = cvs.getContext("2d");
 
-const gap = 150; // Увеличил gap для лучшей играбельности
+const gap = 150; // Increased gap for better playability
 let bX = 50;
 let bY = cvs.height / 2;
-let birdVelocity = 0; // Инициализация скоростью 0
-const gravity = 0.6; // Снизил гравитацию для лучшей играбельности
+let birdVelocity = 0; // Initialize velocity to 0
+const gravity = 0.6; // Adjusted gravity for smoother movement
 let score = 0;
 let birdSize = 20;
 let pipeWidth = 50;
-let pipeDistance = 300; // Уменьшил расстояние между трубами
+let pipeDistance = 300; // Adjust distance for difficulty
 let lastFrameTime = performance.now();
 let gameStartTime = 0;
-const jumpHeight = -8; // Изменение силы прыжка
-const horizontalSpeed = 3; // Увеличил горизонтальную скорость
+const jumpHeight = -8; // Adjusted jump height
+const horizontalSpeed = 3; // Adjusted horizontal speed
 let gameStarted = false;
 let gameOver = false;
 
@@ -62,8 +77,8 @@ function draw(currentTime) {
     lastFrameTime = currentTime;
 
     if (gameOver) {
-        alert("Game Over! Your score: " + score); // Вывод счета после окончания игры
-        location.reload();
+        alert("Game Over! Your score: " + score + " seconds"); // Alert the score
+        location.reload(); // Reload to restart
         return;
     }
 
@@ -71,64 +86,54 @@ function draw(currentTime) {
     ctx.fillStyle = "skyblue";
     ctx.fillRect(0, 0, cvs.width, cvs.height);
 
-    // Гарантируем наличие хотя бы одной трубы
-    if (pipe.length === 0) {
-        createPipe();
-        gameStarted = true;
-        gameStartTime = currentTime;
-    } else {
-        // Добавляем новые трубы только если нужно
-        if (pipe[pipe.length - 1].x < cvs.width - pipeDistance) {
+    if (gameStarted) {
+        // Pipe generation and movement
+        if (pipe.length === 0) {
             createPipe();
         }
-    }
 
-    // Проверяем, существует ли хотя бы одна труба, прежде чем обрабатывать массив
-    if (pipe.length > 0) {
-        for (let i = 0; i < pipe.length; i++) {
-            const pipeTop = pipe[i].y;
-            const pipeBottom = pipeTop + pipe[i].gap + cvs.height / 6;
-
-            ctx.fillStyle = "green"; // Цвет труб изменён на зелёный
-            ctx.fillRect(pipe[i].x, 0, pipeWidth, pipeTop);
-            ctx.fillRect(pipe[i].x, pipeBottom, pipeWidth, cvs.height - pipeBottom);
-
-            pipe[i].x -= horizontalSpeed * 60 * deltaTime;
-
-            if (pipe[i].x + pipeWidth < 0) {
-                pipe.shift();
+        if (pipe.length > 0) {
+            while (pipe[pipe.length - 1].x < cvs.width - pipeDistance) {
+                createPipe();
             }
 
-            if (checkCollision(pipe[i])) {
-                gameOver = true;
+            for (let i = 0; i < pipe.length; i++) {
+                drawPipe(pipe[i]);
+                pipe[i].x -= horizontalSpeed * 60 * deltaTime;
+                if (pipe[i].x + pipeWidth < 0) {
+                    pipe.shift();
+                }
+                if (checkCollision(pipe[i])) {
+                    gameOver = true;
+                }
+                checkScore(pipe[i]);
             }
-
-            checkScore(pipe[i]);
         }
-    }
 
-    ctx.fillStyle = "red";
-    ctx.fillRect(bX, bY, birdSize, birdSize);
+        // Bird movement and drawing
+        birdVelocity += gravity * 60 * deltaTime; // Added 60 for frames per second
+        bY += birdVelocity * deltaTime;
+        drawBird();
 
-    birdVelocity += gravity * 60 * deltaTime; // Добавил 60 для корректной скорости
-    bY += birdVelocity * deltaTime;
+        // Ground
+        ctx.fillStyle = "green";
+        ctx.fillRect(0, cvs.height - 20, cvs.width, 20);
 
-    ctx.fillStyle = "green"; // Цвет земли изменён на зелёный
-    ctx.fillRect(0, cvs.height - 20, cvs.width, 20);
-
-    ctx.fillStyle = "#000";
-    ctx.font = "20px Verdana";
-
-    if (gameStartTime) {
-        score = Math.floor((currentTime - gameStartTime) / 1000);
-        ctx.fillText("Time: " + score + " seconds", 10, cvs.height - 20);
+        // Score display
+        ctx.fillStyle = "#000";
+        ctx.font = "20px Verdana";
+        if (gameStartTime) {
+            score = Math.floor((currentTime - gameStartTime) / 1000);
+            ctx.fillText("Time: " + score + " seconds", 10, cvs.height - 20);
+        }
     }
 
     requestAnimationFrame(draw);
 }
 
+
 function createPipe() {
-    const pipeTop = Math.random() * (cvs.height - 2 * (cvs.height / 6) - gap - 20) + cvs.height / 6;
+    const pipeTop = Math.random() * (cvs.height - 2 * (gap) - 20) + gap;
     pipe.push({
         x: cvs.width,
         y: pipeTop,
@@ -136,36 +141,63 @@ function createPipe() {
     });
 }
 
-function checkCollision(pipe) {
-    const birdRect = { x: bX, y: bY, width: birdSize, height: birdSize };
-    const topPipeY = pipe.y;
-    const bottomPipeY = pipe.y + pipe.gap + cvs.height / 6;
-
-    const isInsideTop = birdRect.x + birdSize > pipe.x && birdRect.x < pipe.x + pipeWidth && birdRect.y < topPipeY;
-    const isInsideBottom = birdRect.x + birdSize > pipe.x && birdRect.x < pipe.x + pipeWidth && birdRect.y + birdSize > bottomPipeY;
-    const isOnGround = birdRect.y + birdSize > cvs.height - 20;
-
-    return isInsideTop || isInsideBottom || isOnGround;
+function drawPipe(pipe) {
+    const pipeTop = pipe.y;
+    const pipeBottom = pipeTop + pipe.gap;
+    ctx.fillStyle = "grey";
+    ctx.fillRect(pipe.x, 0, pipeWidth, pipeTop);
+    ctx.fillRect(pipe.x, pipeBottom, pipeWidth, cvs.height - pipeBottom);
 }
 
-function checkScore(pipe) {
+function drawBird(){
+    ctx.fillStyle = "red";
+    ctx.fillRect(bX, bY, birdSize, birdSize);
+}
+
+function checkCollision(pipe) {
     const birdRect = { x: bX, y: bY, width: birdSize, height: birdSize };
-    if (birdRect.x > pipe.x + pipeWidth && birdRect.x < pipe.x + pipeWidth +10 && birdRect.y > pipe.y && birdRect.y + birdSize < pipe.y + pipe.gap + cvs.height / 6) { // Добавлена проверка на пролёт между трубами
+    const topPipeRect = { x: pipe.x, y: 0, width: pipeWidth, height: pipe.y };
+    const bottomPipeRect = { x: pipe.x, y: pipe.y + pipe.gap, width: pipeWidth, height: cvs.height - (pipe.y + pipe.gap) };
+
+    return (
+        intersects(birdRect, topPipeRect) ||
+        intersects(birdRect, bottomPipeRect) ||
+        bY + birdSize > cvs.height - 20 // Ground collision
+    );
+}
+
+function intersects(rectA, rectB) {
+    return (
+        rectA.x < rectB.x + rectB.width &&
+        rectA.x + rectA.width > rectB.x &&
+        rectA.y < rectB.y + rectB.height &&
+        rectA.height + rectA.y > rectB.y
+    );
+}
+
+
+function checkScore(pipe) {
+    if (bX > pipe.x + pipeWidth && !pipe.scored) {
         score++;
-        console.log("Score increased! Score:", score);
+        pipe.scored = true;
     }
 }
 
-
 document.addEventListener('touchstart', moveUp);
-document.addEventListener('keydown', function(event) {
-    if (event.code === 'Space') {
+document.addEventListener('keydown', function(event){
+    if(event.code === 'Space'){
         moveUp();
     }
 });
 
 function moveUp() {
   birdVelocity = jumpHeight;
+}
+
+function startGame() {
+    gameStarted = true;
+    gameStartTime = performance.now();
+    document.getElementById("start-button").style.display = "none";
 }
 
 requestAnimationFrame(draw);
