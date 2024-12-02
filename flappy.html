@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Flappy Bird</title>
+<style>
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+#canvas {
+  width: 100%;
+  height: 100%;
+  background-color: skyblue;
+  display: block;
+}
+#back-button {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 10; /* Ensure button is on top */
+  background-color: rgba(255, 255, 255, 0.8); /* Semi-transparent white background */
+  border: none;
+  border-radius: 5px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+<button id="back-button" onclick="window.location.href='index.html';">Назад</button>
+<canvas id="canvas"></canvas>
+<script>
+"use strict";
+
+const cvs = document.getElementById("canvas");
+cvs.width = window.innerWidth;
+cvs.height = window.innerHeight;
+const ctx = cvs.getContext("2d");
+
+const gap = 5;
+let constant;
+let bX = 50;
+let bY = cvs.height / 2;
+let birdVelocity = 5;
+const gravity = 3;
+let score = 0;
+let birdSize = 20;
+let pipeWidth = 60;
+let pipeDistance = 500;
+let lastFrameTime = performance.now();
+let gameStartTime = 0;
+const jumpHeight = -30;
+const horizontalSpeed = 2;
+let gameStarted = false;
+let gameOver = false;
+
+const pipe = [];
+
+function draw(currentTime) {
+    const deltaTime = (currentTime - lastFrameTime) / 1000;
+    lastFrameTime = currentTime;
+
+    if (gameOver) {
+        location.reload();
+        return;
+    }
+
+    ctx.clearRect(0, 0, cvs.width, cvs.height);
+    ctx.fillStyle = "skyblue";
+    ctx.fillRect(0, 0, cvs.width, cvs.height);
+
+    if (!gameStarted) {
+        const pipeTop = Math.random() * (cvs.height - 2 * (cvs.height / 6) - gap - 20) + cvs.height / 6;
+        pipe.push({
+            x: cvs.width,
+            y: pipeTop,
+            gap: gap
+        });
+        gameStarted = true;
+        gameStartTime = currentTime;
+    }
+
+    if (pipe.length > 0) {
+        while (pipe[pipe.length - 1].x < cvs.width - pipeDistance) {
+            const pipeTop = Math.random() * (cvs.height - 2 * (cvs.height / 6) - gap - 20) + cvs.height / 6;
+            pipe.push({
+                x: cvs.width,
+                y: pipeTop,
+                gap: gap
+            });
+        }
+
+        for (let i = 0; i < pipe.length; i++) {
+            const pipeTop = pipe[i].y;
+            const pipeBottom = pipeTop + pipe[i].gap + cvs.height / 6;
+
+            ctx.fillStyle = "grey";
+            ctx.fillRect(pipe[i].x, 0, pipeWidth, pipeTop);
+            ctx.fillRect(pipe[i].x, pipeBottom, pipeWidth, cvs.height - pipeBottom);
+
+            pipe[i].x -= horizontalSpeed * 60 * deltaTime;
+
+            if (pipe[i].x + pipeWidth < 0) {
+                pipe.shift();
+            }
+
+            if (checkCollision(pipe[i])) {
+                gameOver = true;
+            }
+
+            checkScore(pipe[i]);
+        }
+    }
+
+    ctx.fillStyle = "red";
+    ctx.fillRect(bX, bY, birdSize, birdSize);
+
+    birdVelocity += gravity * deltaTime * 60;
+    bY += birdVelocity * deltaTime;
+
+    ctx.fillStyle = "green";
+    ctx.fillRect(0, cvs.height - 20, cvs.width, 20);
+
+    ctx.fillStyle = "#000";
+    ctx.font = "20px Verdana";
+
+    if (gameStartTime) {
+        score = Math.floor((currentTime - gameStartTime) / 1000);
+        ctx.fillText("Time: " + score + " seconds", 10, cvs.height - 20);
+    }
+
+    requestAnimationFrame(draw);
+}
+
+function checkCollision(pipe) {
+    const birdRect = { x: bX, y: bY, width: birdSize, height: birdSize };
+    const topPipeY = pipe.y;
+    const bottomPipeY = pipe.y + pipe.gap + cvs.height / 6;
+
+    const isInsideTop = birdRect.x + birdSize > pipe.x && birdRect.x < pipe.x + pipeWidth && birdRect.y < topPipeY;
+    const isInsideBottom = birdRect.x + birdSize > pipe.x && birdRect.x < pipe.x + pipeWidth && birdRect.y + birdSize > bottomPipeY;
+    const isOnGround = birdRect.y + birdSize > cvs.height - 20;
+
+    return isInsideTop || isInsideBottom || isOnGround;
+}
+
+function checkScore(pipe) {
+    const birdRect = { x: bX, y: bY, width: birdSize, height: birdSize };
+    const topPipeY = pipe.y;
+    const bottomPipeY = pipe.y + pipe.gap + cvs.height / 6;
+
+    if (birdRect.x > pipe.x + pipeWidth ) {
+        if (birdRect.y > topPipeY && birdRect.y + birdSize < bottomPipeY) {
+            score++;
+            console.log("Score increased! Score:", score);
+        }
+    }
+}
+
+
+document.addEventListener('touchstart', moveUp);
+
+function moveUp() {
+  birdVelocity = jumpHeight * 5;
+}
+
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>
