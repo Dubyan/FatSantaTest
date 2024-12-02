@@ -1,44 +1,29 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Flappy Bird</title>
 <style>
-html, body {
-  height: 100%;
-  margin: 0;
-  overflow: hidden;
-}
-#canvas {
-  width: 100%;
-  height: 100%;
-  background-color: skyblue;
-  display: block;
+body { margin: 0; overflow: hidden; }
+#canvas { width: 100vw; height: 100vh; display: block; }
+#start-button {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #4CAF50;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    display: block; /* Initially visible */
 }
 #back-button {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  z-index: 10;
-  background-color: rgba(255, 255, 255, 0.8);
-  border: none;
-  border-radius: 5px;
-  padding: 5px 10px;
-  cursor: pointer;
-}
-#start-button {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 10;
-  background-color: rgba(0, 255, 0, 0.8);
-  border: none;
-  border-radius: 5px;
-  padding: 10px 20px;
-  cursor: pointer;
-  font-size: 16px;
-  display: block; /* Initially visible */
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background-color: #f0f0f0;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
 }
 </style>
 </head>
@@ -47,135 +32,130 @@ html, body {
 <button id="start-button" onclick="startGame()">Старт</button>
 <canvas id="canvas"></canvas>
 <script>
-"use strict";
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let devicePixelRatio = window.devicePixelRatio || 1;
+canvas.width = window.innerWidth * devicePixelRatio;
+canvas.height = window.innerHeight * devicePixelRatio;
+ctx.scale(devicePixelRatio, devicePixelRatio);
 
-const cvs = document.getElementById("canvas");
-cvs.width = window.innerWidth;
-cvs.height = window.innerHeight;
-const ctx = cvs.getContext("2d");
 
-const gap = 5;
-let constant;
-let bX = 50;
-let bY = cvs.height / 2;
-let birdVelocity = 0; // Initialize velocity to 0 for better start
-const gravity = 3;
+const gravity = 0.5;
+const birdSize = 20;
+const jumpHeight = -10;
+const pipeWidth = 50;
+const pipeGap = 150;
+const pipeSpeed = 2;
+
+let birdX = 50;
+let birdY = canvas.height / 2;
+let birdVelocity = 0;
 let score = 0;
-let birdSize = 20;
-let pipeWidth = 60;
-let pipeDistance = 500;
-let lastFrameTime = performance.now();
-let gameStartTime = 0;
-const jumpHeight = -30;
-const horizontalSpeed = 2;
 let gameStarted = false;
 let gameOver = false;
+let lastFrameTime = performance.now();
 
-const pipe = [];
+const pipes = [];
 
-function draw(currentTime) {
-    const deltaTime = (currentTime - lastFrameTime) / 1000;
-    lastFrameTime = currentTime;
+function drawBird() {
+  ctx.fillStyle = 'red';
+  ctx.fillRect(birdX, birdY, birdSize, birdSize);
+}
 
-    if (gameOver) {
-        location.reload();
-        return;
+function createPipe() {
+  const pipeTop = Math.random() * (canvas.height - pipeGap - 100) + 50;
+  pipes.push({
+    x: canvas.width,
+    top: pipeTop,
+    bottom: pipeTop + pipeGap,
+    scored: false
+  });
+}
+
+function drawPipes() {
+  ctx.fillStyle = 'grey';
+  for (let i = pipes.length - 1; i >= 0; i--) {
+    const pipe = pipes[i];
+    ctx.fillRect(pipe.x, 0, pipeWidth, pipe.top);
+    ctx.fillRect(pipe.x, pipe.bottom, pipeWidth, canvas.height - pipe.bottom);
+    pipe.x -= pipeSpeed;
+    if (pipe.x + pipeWidth < 0) {
+      pipes.shift();
     }
-
-    ctx.clearRect(0, 0, cvs.width, cvs.height);
-    ctx.fillStyle = "skyblue";
-    ctx.fillRect(0, 0, cvs.width, cvs.height);
-
-    if (gameStarted) { // Only execute game logic if gameStarted is true
-        if (pipe.length === 0) {
-            const pipeTop = Math.random() * (cvs.height - 2 * (cvs.height / 6) - gap - 20) + cvs.height / 6;
-            pipe.push({
-                x: cvs.width,
-                y: pipeTop,
-                gap: gap
-            });
-        }
-
-        if (pipe.length > 0) {
-            while (pipe[pipe.length - 1].x < cvs.width - pipeDistance) {
-                const pipeTop = Math.random() * (cvs.height - 2 * (cvs.height / 6) - gap - 20) + cvs.height / 6;
-                pipe.push({
-                    x: cvs.width,
-                    y: pipeTop,
-                    gap: gap
-                });
-            }
-
-            for (let i = 0; i < pipe.length; i++) {
-                const pipeTop = pipe[i].y;
-                const pipeBottom = pipeTop + pipe[i].gap + cvs.height / 6;
-
-                ctx.fillStyle = "grey";
-                ctx.fillRect(pipe[i].x, 0, pipeWidth, pipeTop);
-                ctx.fillRect(pipe[i].x, pipeBottom, pipeWidth, cvs.height - pipeBottom);
-
-                pipe[i].x -= horizontalSpeed * 60 * deltaTime;
-
-                if (pipe[i].x + pipeWidth < 0) {
-                    pipe.shift();
-                }
-
-                if (checkCollision(pipe[i])) {
-                    gameOver = true;
-                }
-
-                checkScore(pipe[i]);
-            }
-        }
-
-        ctx.fillStyle = "red";
-        ctx.fillRect(bX, bY, birdSize, birdSize);
-
-        birdVelocity += gravity * deltaTime * 60;
-        bY += birdVelocity * deltaTime;
-
-        ctx.fillStyle = "green";
-        ctx.fillRect(0, cvs.height - 20, cvs.width, 20);
-
-        ctx.fillStyle = "#000";
-        ctx.font = "20px Verdana";
-
-        if (gameStartTime) {
-            score = Math.floor((currentTime - gameStartTime) / 1000);
-            ctx.fillText("Time: " + score + " seconds", 10, cvs.height - 20);
-        }
+    if (detectCollision(pipe)) {
+      gameOver = true;
     }
-
-    requestAnimationFrame(draw);
+    if (pipe.x + pipeWidth < birdX && !pipe.scored) {
+      score++;
+      pipe.scored = true;
+    }
+  }
 }
 
-function checkCollision(pipe) {
-    const birdRect = { x: bX, y: bY, width: birdSize, height: birdSize };
-    const topPipeY = pipe.y;
-    const bottomPipeY = pipe.y + pipe.gap + cvs.height / 6;
+function detectCollision(pipe) {
+  return (
+    birdX < pipe.x + pipeWidth &&
+    birdX + birdSize > pipe.x &&
+    (birdY < pipe.top || birdY + birdSize > pipe.bottom) ||
+    birdY + birdSize > canvas.height
+  );
+}
 
-    const isInsideTop = birdRect.x + birdSize > pipe.x && birdRect.x < pipe.x + pipeWidth && birdRect.y < topPipeY;
-    const isInsideBottom = birdRect.x + birdSize > pipe.x && birdRect.x < pipe.x + pipeWidth && birdRect.y + birdSize > bottomPipeY;
-    const isOnGround = birdRect.y + birdSize > cvs.height - 20;
+function drawScore() {
+  ctx.fillStyle = 'black';
+  ctx.font = '20px Arial';
+  ctx.fillText(`Score: ${score}`, 10, 30);
+}
 
-    return isInsideTop || isInsideBottom || isOnGround;
+function update(currentTime) {
+  const deltaTime = (currentTime - lastFrameTime) / 1000;
+  lastFrameTime = currentTime;
+
+  if (gameOver) {
+    alert("Game Over! Your score: " + score);
+    gameStarted = false;
+    document.getElementById('start-button').style.display = 'block';
+    return;
+  }
+
+  if (gameStarted) {
+    birdVelocity += gravity * deltaTime * 60;
+    birdY += birdVelocity * deltaTime;
+
+    if (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - 300) {
+      createPipe();
+    }
+    drawPipes();
+    drawBird();
+    drawScore();
+  }
+
+  requestAnimationFrame(update);
 }
 
 
-
-document.addEventListener('touchstart', moveUp);
-
-function moveUp() {
-  birdVelocity = jumpHeight * 5;
+function jump() {
+  birdVelocity = jumpHeight;
 }
+
+canvas.addEventListener('touchstart', jump);
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space') {
+    jump();
+  }
+});
 
 function startGame() {
-    gameStarted = true;
-    gameStartTime = performance.now();
-    document.getElementById("start-button").style.display = "none";
+  gameStarted = true;
+  document.getElementById('start-button').style.display = 'none';
+  birdY = canvas.height / 2;
+  birdVelocity = 0;
+  pipes.length = 0;
+  score = 0;
+  gameOver = false;
 }
 
-requestAnimationFrame(draw);
+requestAnimationFrame(update);
 </script>
 </body>
 </html>
