@@ -54,31 +54,84 @@ cvs.width = window.innerWidth;
 cvs.height = window.innerHeight;
 const ctx = cvs.getContext("2d");
 
-const gap = 150; // Increased gap for better playability
-let bX = 50;
-let bY = cvs.height / 2;
-let birdVelocity = 0; // Initialize velocity to 0
-const gravity = 0.6; // Adjusted gravity for smoother movement
-let score = 0;
-let birdSize = 20;
-let pipeWidth = 50;
-let pipeDistance = 300; // Adjust distance for difficulty
-let lastFrameTime = performance.now();
-let gameStartTime = 0;
-const jumpHeight = -8; // Adjusted jump height
-const horizontalSpeed = 3; // Adjusted horizontal speed
-let gameStarted = false;
-let gameOver = false;
+const gap = 150; // Distance between top and bottom pipes
+let bX = 50;     // Bird's x-coordinate
+let bY = cvs.height / 2; // Bird's y-coordinate
+let birdVelocity = 0;   // Bird's vertical velocity
+const gravity = 0.6;    // Gravitational acceleration
+let score = 0;         // Game score
+let birdSize = 20;     // Bird's size
+let pipeWidth = 50;    // Pipe width
+let pipeDistance = 300; // Minimum distance between pipes
+let lastFrameTime = performance.now(); // Time of the last frame
+let gameStartTime = 0;  // Game start time
+const jumpHeight = -8;  // Vertical jump speed
+const horizontalSpeed = 3; // Horizontal pipe speed
+let gameStarted = false; // Flag to indicate game start
+let gameOver = false;   // Flag to indicate game over
 
-const pipe = [];
+const pipe = [];       // Array to store pipe objects
 
+// Function to draw a single pipe
+function drawPipe(pipe) {
+    const pipeTop = pipe.y;
+    const pipeBottom = pipeTop + pipe.gap;
+    ctx.fillStyle = "grey";
+    ctx.fillRect(pipe.x, 0, pipeWidth, pipeTop);
+    ctx.fillRect(pipe.x, pipeBottom, pipeWidth, cvs.height - pipeBottom);
+}
+
+// Function to draw the bird
+function drawBird() {
+    ctx.fillStyle = "red";
+    ctx.fillRect(bX, bY, birdSize, birdSize);
+}
+
+// Function to create a new pipe
+function createPipe() {
+    const pipeTop = Math.random() * (cvs.height - 2 * gap - 20) + gap;
+    pipe.push({
+        x: cvs.width,
+        y: pipeTop,
+        gap: gap,
+        scored: false // Flag to prevent double scoring
+    });
+}
+
+// Function to check for collisions
+function checkCollision(pipe) {
+    const birdRect = { x: bX, y: bY, width: birdSize, height: birdSize };
+    const topPipeRect = { x: pipe.x, y: 0, width: pipeWidth, height: pipe.y };
+    const bottomPipeRect = { x: pipe.x, y: pipe.y + pipe.gap, width: pipeWidth, height: cvs.height - (pipe.y + pipe.gap) };
+
+    function intersects(rectA, rectB) {
+        return (
+            rectA.x < rectB.x + rectB.width &&
+            rectA.x + rectA.width > rectB.x &&
+            rectA.y < rectB.y + rectB.height &&
+            rectA.height + rectA.y > rectB.y
+        );
+    }
+
+    return intersects(birdRect, topPipeRect) || intersects(birdRect, bottomPipeRect) || bY + birdSize > cvs.height - 20;
+}
+
+// Function to check if the bird passed a pipe
+function checkScore(pipe) {
+    if (bX > pipe.x + pipeWidth && !pipe.scored) {
+        score++;
+        pipe.scored = true;
+    }
+}
+
+// Main game loop
 function draw(currentTime) {
     const deltaTime = (currentTime - lastFrameTime) / 1000;
     lastFrameTime = currentTime;
 
     if (gameOver) {
-        alert("Game Over! Your score: " + score + " seconds"); // Alert the score
-        location.reload(); // Reload to restart
+        alert("Game Over! Your score: " + score + " seconds");
+        location.reload();
         return;
     }
 
@@ -91,12 +144,10 @@ function draw(currentTime) {
         if (pipe.length === 0) {
             createPipe();
         }
-
         if (pipe.length > 0) {
             while (pipe[pipe.length - 1].x < cvs.width - pipeDistance) {
                 createPipe();
             }
-
             for (let i = 0; i < pipe.length; i++) {
                 drawPipe(pipe[i]);
                 pipe[i].x -= horizontalSpeed * 60 * deltaTime;
@@ -111,7 +162,7 @@ function draw(currentTime) {
         }
 
         // Bird movement and drawing
-        birdVelocity += gravity * 60 * deltaTime; // Added 60 for frames per second
+        birdVelocity += gravity * 60 * deltaTime;
         bY += birdVelocity * deltaTime;
         drawBird();
 
@@ -131,76 +182,26 @@ function draw(currentTime) {
     requestAnimationFrame(draw);
 }
 
-
-function createPipe() {
-    const pipeTop = Math.random() * (cvs.height - 2 * (gap) - 20) + gap;
-    pipe.push({
-        x: cvs.width,
-        y: pipeTop,
-        gap: gap
-    });
-}
-
-function drawPipe(pipe) {
-    const pipeTop = pipe.y;
-    const pipeBottom = pipeTop + pipe.gap;
-    ctx.fillStyle = "grey";
-    ctx.fillRect(pipe.x, 0, pipeWidth, pipeTop);
-    ctx.fillRect(pipe.x, pipeBottom, pipeWidth, cvs.height - pipeBottom);
-}
-
-function drawBird(){
-    ctx.fillStyle = "red";
-    ctx.fillRect(bX, bY, birdSize, birdSize);
-}
-
-function checkCollision(pipe) {
-    const birdRect = { x: bX, y: bY, width: birdSize, height: birdSize };
-    const topPipeRect = { x: pipe.x, y: 0, width: pipeWidth, height: pipe.y };
-    const bottomPipeRect = { x: pipe.x, y: pipe.y + pipe.gap, width: pipeWidth, height: cvs.height - (pipe.y + pipe.gap) };
-
-    return (
-        intersects(birdRect, topPipeRect) ||
-        intersects(birdRect, bottomPipeRect) ||
-        bY + birdSize > cvs.height - 20 // Ground collision
-    );
-}
-
-function intersects(rectA, rectB) {
-    return (
-        rectA.x < rectB.x + rectB.width &&
-        rectA.x + rectA.width > rectB.x &&
-        rectA.y < rectB.y + rectB.height &&
-        rectA.height + rectA.y > rectB.y
-    );
-}
-
-
-function checkScore(pipe) {
-    if (bX > pipe.x + pipeWidth && !pipe.scored) {
-        score++;
-        pipe.scored = true;
-    }
+// Function to handle bird jump (triggered by touch or spacebar)
+function moveUp() {
+    birdVelocity = jumpHeight;
 }
 
 document.addEventListener('touchstart', moveUp);
-document.addEventListener('keydown', function(event){
-    if(event.code === 'Space'){
+document.addEventListener('keydown', (event) => {
+    if (event.code === 'Space') {
         moveUp();
     }
 });
 
-function moveUp() {
-  birdVelocity = jumpHeight;
-}
-
+// Function to start the game
 function startGame() {
     gameStarted = true;
     gameStartTime = performance.now();
     document.getElementById("start-button").style.display = "none";
 }
 
-requestAnimationFrame(draw);
+requestAnimationFrame(draw); // Start the animation loop
 </script>
 </body>
 </html>
