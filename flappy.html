@@ -161,18 +161,6 @@ function checkCollision(pipe) {
     return isInsideTop || isInsideBottom || isOnGround;
 }
 
-function checkScore(pipe) {
-    const birdRect = { x: bX, y: bY, width: birdSize, height: birdSize };
-    const topPipeY = pipe.y;
-    const bottomPipeY = pipe.y + pipe.gap + cvs.height / 6;
-
-    if (birdRect.x > pipe.x + pipeWidth ) {
-        if (birdRect.y > topPipeY && birdRect.y + birdSize < bottomPipeY) {
-            score++;
-            console.log("Score increased! Score:", score);
-        }
-    }
-}
 
 
 document.addEventListener('touchstart', moveUp);
