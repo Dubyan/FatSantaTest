@@ -54,21 +54,22 @@ cvs.width = window.innerWidth;
 cvs.height = window.innerHeight;
 const ctx = cvs.getContext("2d");
 
-const gap = 150; // Distance between top and bottom pipes
-let bX = 50;     // Bird's x-coordinate
-let bY = cvs.height / 2; // Bird's y-coordinate
-let birdVelocity = 0;   // Bird's vertical velocity
-const gravity = 0.6;    // Gravitational acceleration
-let score = 0;         // Game score
-let birdSize = 20;     // Bird's size
-let pipeWidth = 50;    // Pipe width
-let pipeDistance = 300; // Minimum distance between pipes
-let lastFrameTime = performance.now(); // Time of the last frame
-let gameStartTime = 0;  // Game start time
-const jumpHeight = -8;  // Vertical jump speed
-const horizontalSpeed = 3; // Horizontal pipe speed
-let gameStarted = false; // Flag to indicate game start
-let gameOver = false;   // Flag to indicate game over
+const gap = 5;
+let constant;
+let bX = 50;
+let bY = cvs.height / 2;
+let birdVelocity = 5;
+const gravity = 3;
+let score = 0;
+let birdSize = 20;
+let pipeWidth = 60;
+let pipeDistance = 500;
+let lastFrameTime = performance.now();
+let gameStartTime = 0;
+const jumpHeight = -30;
+const horizontalSpeed = 2;
+let gameStarted = false;
+let gameOver = false;
 
 const pipe = [];       // Array to store pipe objects
 
